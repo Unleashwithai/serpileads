@@ -990,7 +990,7 @@ async function runSearch() {
     });
     if (!resp.ok) {
       const err = await resp.json();
-      throw new Error(err.error || 'SerpApi error: ' + resp.status);
+      throw new Error(JSON.stringify(err));
     }
     const data = await resp.json();
     let businesses = (data.local_results || []).slice(0, maxResults);
