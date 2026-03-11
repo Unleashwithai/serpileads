@@ -680,8 +680,8 @@
   <div class="badge">UK · NI EDITION</div>
   <div class="header-right">
     <div class="api-status">
-      <div class="dot" id="apiDot"></div>
-      <span id="apiStatusText">No API key</span>
+      <div class="dot ok"></div>
+      <span>Ready</span>
     </div>
   </div>
 </header>
@@ -692,15 +692,7 @@
 
     <!-- API Setup -->
     <div class="card">
-      <div class="card-title">🔑 API Setup</div>
-
-      <div class="api-setup">
-        <h4 style="color:#a78bfa;font-size:11px;letter-spacing:1px;text-transform:uppercase;margin-bottom:8px;">Free API — No Credit Card</h4>
-        <p>Uses <strong style="color:#a78bfa">SerpApi</strong> — 100 free searches/month. Sign up at <a href="https://serpapi.com" target="_blank">serpapi.com</a> → get your API key → paste below.</p>
-      </div>
-
-      <label>SERPAPI KEY</label>
-      <input type="password" id="apiKey" placeholder="Paste your SerpApi key..." />
+      <div class="card-title">ℹ️ About</div>
 
       <div class="how-it-works">
         <h4>⚙️ How this tool works</h4>
@@ -866,30 +858,6 @@ document.querySelectorAll('.cat-btn').forEach(btn => {
   });
 });
 
-// API key check
-document.getElementById('apiKey').addEventListener('input', function() {
-  const dot = document.getElementById('apiDot');
-  const txt = document.getElementById('apiStatusText');
-  if (this.value.length > 10) {
-    dot.classList.add('ok');
-    txt.textContent = 'API key set';
-  } else {
-    dot.classList.remove('ok');
-    txt.textContent = 'No API key';
-  }
-  localStorage.setItem('serpapi_key', this.value);
-});
-
-// Restore saved key
-window.addEventListener('load', () => {
-  const saved = localStorage.getItem('serpapi_key');
-  if (saved) {
-    document.getElementById('apiKey').value = saved;
-    document.getElementById('apiDot').classList.add('ok');
-    document.getElementById('apiStatusText').textContent = 'API key set';
-  }
-});
-
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 function log(msg, type = '') {
   const el = document.getElementById('logLine');
@@ -997,9 +965,6 @@ function classifyLead(analysis) {
 
 // ─── Main Search ─────────────────────────────────────────────────────────────
 async function runSearch() {
-  const key = document.getElementById('apiKey').value.trim();
-  if (!key) { alert('Please enter your SerpApi key first!'); return; }
-
   const customCat = document.getElementById('customCat').value.trim();
   const category = customCat || selectedCategory;
   const location = document.getElementById('location').value.trim() || 'Belfast';
@@ -1017,19 +982,18 @@ async function runSearch() {
   log('Contacting SerpApi...');
 
   try {
-    // Search Google Maps via SerpApi
-    const searchQuery = encodeURIComponent(category + ' in ' + location + ', UK');
-    const serpUrl = `https://serpapi.com/search.json?engine=google_maps&q=${searchQuery}&api_key=${key}&hl=en&gl=gb&type=search`;
-
-    let businesses = [];
-
-    const resp = await fetch(serpUrl);
+    // Search via our server-side proxy
+    const resp = await fetch('/api/serpapi', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query: category, location })
+    });
     if (!resp.ok) {
       const err = await resp.json();
       throw new Error(err.error || 'SerpApi error: ' + resp.status);
     }
     const data = await resp.json();
-    businesses = (data.local_results || []).slice(0, maxResults);
+    let businesses = (data.local_results || []).slice(0, maxResults);
 
     if (businesses.length === 0) {
       log('No results found. Try a different location or category.', 'warn');
